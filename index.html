@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cat Moto Final Fix</title>
+    <title>Cat Moto - Полная версия</title>
     <style>
         body { margin: 0; background: #111; overflow: hidden; font-family: sans-serif; touch-action: none; color: white; }
         canvas { display: block; }
@@ -29,22 +30,23 @@ const SKINS = [
 function resetGame() {
     obs = [];
     p.l = 1;
-    p.respawn = true; // Возвращаем респаун при каждом новом запуске
+    p.respawn = true;
     p.tx = cvs.width/2 - 40;
     p.x = p.tx;
 }
 
 function init() {
-    cvs.width = window.innerWidth; cvs.height = window.innerHeight;
+    cvs.width = window.innerWidth; 
+    cvs.height = window.innerHeight;
     resetGame();
     loop();
 }
 
-window.addEventListener('touchstart', e => {
-    const x = e.touches[0].clientX, y = e.touches[0].clientY;
+// Обработка и нажатий мыши, и касаний
+function handleInput(x, y) {
     if (st === 'MENU') { 
         if (y < cvs.height/2) { 
-            resetGame(); // ГЛАВНЫЙ ФИКС: Сброс перед стартом
+            resetGame();
             st = 'GAME'; 
         } 
         else st = 'STORE'; 
@@ -64,21 +66,32 @@ window.addEventListener('touchstart', e => {
         p.tx = (cvs.width/3)*p.l + cvs.width/6 - 40;
     }
     else if (st === 'OVER') st = 'MENU';
+}
+
+window.addEventListener('touchstart', e => {
+    handleInput(e.touches[0].clientX, e.touches[0].clientY);
+    e.preventDefault();
+}, {passive: false});
+
+window.addEventListener('mousedown', e => {
+    handleInput(e.clientX, e.clientY);
 });
 
 function loop() {
-    ctx.fillStyle = '#222'; ctx.fillRect(0,0,cvs.width,cvs.height);
+    ctx.fillStyle = '#222'; 
+    ctx.fillRect(0,0,cvs.width,cvs.height);
     
     if (st === 'MENU') {
         ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.font = 'bold 30px Arial';
         ctx.fillText("В ПУТЬ", cvs.width/2, cvs.height/3);
         ctx.fillText("МАГАЗИН", cvs.width/2, cvs.height/1.5);
     } else if (st === 'STORE') {
-        ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.fillText("БАЛАНС: "+coins, cvs.width/2, 60);
+        ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.font = '20px Arial';
+        ctx.fillText("БАЛАНС: " + coins, cvs.width/2, 60);
         SKINS.forEach((s, i) => {
             ctx.fillStyle = currentSkin === s.n ? '#1dd1a1' : (unlocked.includes(s.n) ? '#54a0ff' : '#ee5253');
             ctx.fillRect(20, 100 + i * 80, cvs.width-40, 60);
-            ctx.fillStyle = 'white'; ctx.font = '20px Arial';
+            ctx.fillStyle = 'white';
             ctx.fillText(s.n + " (" + (unlocked.includes(s.n) ? 'ВЫБРАТЬ' : s.p) + ")", cvs.width/2, 140 + i * 80);
         });
         ctx.fillText("НАЗАД", cvs.width/2, cvs.height-40);
@@ -104,13 +117,51 @@ function loop() {
         ctx.restore();
 
         if (Math.random() < 0.03) obs.push({ l: Math.floor(Math.random()*3), y: -50, t: Math.random()>0.3?'c':'s' });
-        obs.forEach((o, i) => {
-            o.y += 10; let ox = (cvs.width/3)*o.l + cvs.width/6 - 25;
-            ctx.fillStyle = o.t === 'c' ? '#f1c40f' : '#e74c3c';
-            if(o.t === 'c') { ctx.beginPath(); ctx.arc(ox+25, o.y+25, 20, 0, Math.PI*2); ctx.fill(); }
-            else { ctx.fillRect(ox, o.y, 50, 50); }
+        
+        for (let i = obs.length - 1; i >= 0; i--) {
+            let o = obs[i];
+            o.y += 10; 
+            let ox = (cvs.width/3)*o.l + cvs.width/6 - 25;
             
+            ctx.fillStyle = o.t === 'c' ? '#f1c40f' : '#e74c3c';
+            if(o.t === 'c') { 
+                ctx.beginPath(); ctx.arc(ox+25, o.y+25, 20, 0, Math.PI*2); ctx.fill(); 
+            } else { 
+                ctx.fillRect(ox, o.y, 50, 50); 
+            }
+            
+            // Коллизии
             if (o.y > cvs.height-220 && o.y < cvs.height-100 && o.l === p.l) {
                 if (o.t === 's') {
-                    if(p.respawn) { p.respawn = false; obs.splice(i,1); } // Респаун работает!
-                
+                    st = 'OVER';
+                } else {
+                    coins += 10;
+                    obs.splice(i, 1);
+                }
+            }
+            if (o.y > cvs.height) obs.splice(i, 1);
+        }
+
+        ctx.fillStyle = 'white'; ctx.textAlign = 'left'; ctx.font = '20px Arial';
+        ctx.fillText("Монеты: " + coins, 20, 40);
+
+    } else if (st === 'OVER') {
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.fillRect(0,0,cvs.width,cvs.height);
+        ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.font = '30px Arial';
+        ctx.fillText("ИГРА ОКОНЧЕНА", cvs.width/2, cvs.height/2);
+        ctx.font = '20px Arial';
+        ctx.fillText("Нажми, чтобы выйти", cvs.width/2, cvs.height/2 + 50);
+    }
+    requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', () => {
+    cvs.width = window.innerWidth;
+    cvs.height = window.innerHeight;
+});
+
+init();
+</script>
+</body>
+</html>
