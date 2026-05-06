@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cat Moto Final</title>
+    <style>
+        body { margin:0; background:#000; overflow:hidden; touch-action:none; display:flex; align-items:center; justify-content:center; height:100vh; }
+        canvas { display:block; background:#222; width:100vw; height:100vh; }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+<script>
+const cvs = document.getElementById('c');
+const ctx = cvs.getContext('2d');
+
+let st = 'MENU', coins = 5000, roadY = 0, obs = [], p = { l:1, x:0, tx:0 };
+const imgs = {};
+const sources = {
+    r1: '1000197295.png',
+    ui: '1000197294.png',
+    cat: '1000197290.png'
+};
+
+// Простая проверка загрузки
+let loaded = 0;
+for(let k in sources) {
+    imgs[k] = new Image();
+    imgs[k].src = sources[k];
+    imgs[k].onload = () => { loaded++; };
+}
+
+function init() {
+    cvs.width = window.innerWidth;
+    cvs.height = window.innerHeight;
+    p.x = cvs.width/2 - 50;
+    p.tx = p.x;
+    loop();
+}
+
+window.addEventListener('touchstart', e => {
+    const x = e.touches[0].clientX;
+    const y = e.touches[0].clientY;
+    if(st === 'MENU') st = 'GAME';
+    else if(st === 'GAME') {
+        if(x < cvs.width/2) { if(p.l > 0) p.l--; }
+        else { if(p.l < 2) p.l++; }
+        p.tx = (cvs.width/3)*p.l + cvs.width/6 - 50;
+    } else if(st === 'OVER') st = 'MENU';
+});
+
+function loop() {
+    ctx.fillStyle = "#333";
+    ctx.fillRect(0,0,cvs.width,cvs.height);
+
+    if(loaded >= 3) {
+        // Дорога
+        roadY = (roadY + 10) % cvs.height;
+        ctx.drawImage(imgs.r1, 0, roadY, cvs.width, cvs.height);
+        ctx.drawImage(imgs.r1, 0, roadY - cvs.height, cvs.width, cvs.height);
+
+        if(st === 'GAME') {
+            // Кот
+            p.x += (p.tx - p.x) * 0.2;
+            ctx.drawImage(imgs.cat, 0, 0, imgs.cat.width/3, imgs.cat.height, p.x, cvs.height-150, 100, 100);
+
+            // Препятствия (шипы)
+            if(Math.random() < 0.02) obs.push({ l: Math.floor(Math.random()*3), y: -50 });
+            obs.forEach((o, i) => {
+                o.y += 8;
+                let ox = (cvs.width/3)*o.l + cvs.width/6 - 40;
+                ctx.drawImage(imgs.ui, 495, 755, 140, 110, ox, o.y, 80, 60);
+                if(o.y > cvs.height-140 && o.y < cvs.height-80 && o.l === p.l) st = 'OVER';
+                if(o.y > cvs.height) obs.splice(i, 1);
+            });
+        }
+    } else {
+        ctx.fillStyle = "white";
+        ctx.fillText("ЗАГРУЗКА РЕСУРСОВ...", 50, 50);
+    }
+
+    if(st === 'MENU') {
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(0,0,cvs.width,cvs.height);
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.font = "30px Arial";
+        ctx.fillText("CAT MOTO", cvs.width/2, cvs.height/2 - 50);
+        ctx.font = "20px Arial";
+        ctx.fillText("ТАПНИ ЧТОБЫ ИГРАТЬ", cvs.width/2, cvs.height/2 + 20);
+    }
+    
+    if(st === 'OVER') {
+        ctx.fillStyle = "red";
+        ctx.textAlign = "center";
+        ctx.fillText("БАБАХ! ТАПНИ ДЛЯ РЕСТАРТА", cvs.width/2, cvs.height/2);
+    }
+
+    requestAnimationFrame(loop);
+}
+
+init();
+</script>
+</body>
+</html>
